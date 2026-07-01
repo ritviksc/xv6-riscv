@@ -1,0 +1,14 @@
+xv6 is /6, cool 30 abc12
+xv6 is cool
+/6, hello
+30 world
+abc12 test
+15 foo
+-5- bar
+6
+0
+100
+.30.
+12,6
+xv6riscv
+ 6

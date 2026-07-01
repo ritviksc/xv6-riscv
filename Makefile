@@ -148,9 +148,10 @@ UPROGS=\
 	$U/_sleep\
 	$U/_sync\
 	$U/_clear\
+	$U/_sixfive\
 
-fs.img: mkfs/mkfs README $(UPROGS)
-	mkfs/mkfs fs.img README $(UPROGS)
+fs.img: mkfs/mkfs README user/test.txt $(UPROGS)
+	mkfs/mkfs fs.img README user/test.txt $(UPROGS)
 
 -include kernel/*.d user/*.d
 
