@@ -7,14 +7,8 @@ char buf[512];
 
 
 void
-sixfive(char *file)
+sixfive(int fd)
 {
-	int fd = open(file,0); // read file - no need to modify
-	if (fd < 0 )
-	{
-		fprintf(2,"OPEN ERROR for %s\n",file);
-		return;
-	}
 	
 	int IN_NUMBER = 0;
 	int IN_WORD = 0;
@@ -79,15 +73,20 @@ int
 main(int argc,char *argv[])
 {
 
-	if (argc <= 1)
+	if (argc == 1)
 	{
-		fprintf(2,"USAGE: %s <file> [file] ...\n", argv[0]);
-		exit(1);
+		sixfive(0);
 	}
 
 	for (int i = 1; i < argc; i++)
 	{
-		sixfive(argv[i]);
+		int fd = open(argv[i],0); // read file - no need to modify
+		if (fd < 0)
+        	{
+                	fprintf(2,"OPEN ERROR for %s\n",argv[i]);
+                	continue;
+        	}
+		sixfive(fd);
 	}
 
 	exit(0);
