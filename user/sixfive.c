@@ -10,6 +10,11 @@ void
 sixfive(char *file)
 {
 	int fd = open(file,0); // read file - no need to modify
+	if (fd < 0 )
+	{
+		fprintf(2,"OPEN ERROR for %s\n",file);
+		return;
+	}
 	
 	int IN_NUMBER = 0;
 	int IN_WORD = 0;
