@@ -149,6 +149,7 @@ UPROGS=\
 	$U/_sync\
 	$U/_clear\
 	$U/_sixfive\
+	$U/_uptime\
 
 fs.img: mkfs/mkfs README user/test.txt $(UPROGS)
 	mkfs/mkfs fs.img README user/test.txt $(UPROGS)
