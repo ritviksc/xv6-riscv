@@ -1,8 +1,10 @@
 // Shell.
 
 #include "kernel/types.h"
-#include "user/user.h"
 #include "kernel/fcntl.h"
+#include "kernel/stat.h"
+#include "kernel/fs.h"
+#include "user/user.h"
 
 // Parsed command representation
 #define EXEC  1
@@ -12,6 +14,9 @@
 #define BACK  5
 
 #define MAXARGS 10
+
+#define MAX_MATCHES 16
+char *matches[MAX_MATCHES];
 
 struct cmd {
   int type;
@@ -132,11 +137,118 @@ runcmd(struct cmd *cmd)
 }
 
 int
+complete(char *buf)
+{
+	memset(matches, 0, sizeof(matches));
+	int m = 0;
+	struct dirent de;
+	struct stat st;
+	int fd = open("/",0);
+
+	if (fd < 0){
+		fprintf(1,"\a");
+		return -1;
+	}
+
+	while(read(fd, &de, sizeof(de)) == sizeof(de)){
+	  if(m >= MAX_MATCHES) break;
+    	  if(de.inum == 0) continue;  // empty slot 
+	  stat(de.name, &st);
+	  if(st.type == T_FILE){
+    	   // regular file, likely executable assuming no unconvential file naming
+	   if(strncmp(de.name, buf, strlen(buf)) == 0){
+		char *cmd = malloc(strlen(de.name) + 1);
+		char *scmd = cmd;
+		for (int i = 0; i < strlen(de.name); i++){
+			*cmd = de.name[i];
+			cmd++;
+		}
+
+		*cmd = '\0';
+		matches[m++] = scmd;
+	   } 
+
+	  }
+
+	}
+
+        close(fd);
+	return m;
+}
+
+char *
+tabgets(char *buf, int max)
+{
+  int i,cc;
+  char c;
+
+  for (i = 0; i + 1 < max;) {
+    cc = read(0, &c, 1);
+    if (cc < 1)
+      break;
+   
+    if (c == 6){ // CTRL-F to trigger tab completion
+	if (i > 0){
+	  buf[i] = '\0';
+	  int m = complete(buf);
+
+	  if (m < 0){
+	   break;
+          }
+
+	  if (m == 0){ 
+            fprintf(1,"\a");
+	    continue;
+	  }
+	  
+
+	  if (m == 1){
+	    for(int j = strlen(buf); j < strlen(matches[0]); j++){
+		write(1,&matches[0][j],1);
+		buf[i++] = matches[0][j];
+	    }
+
+          } else if (m > 1){
+	     fprintf(1,"\nPossible commands you are looking for:\n");
+	     for (int k = 0; k < m ; k++){
+	 	fprintf(1,"* %s\n",matches[k]);
+	     }
+	     write(1,"$ ",2);
+	     for(int l = 0; buf[l]; l++)
+		write(1,&buf[l],1);
+	     // fprintf(1,"i after completion: %d\n", i);
+	  }
+
+    	    for (int f = 0; f < MAX_MATCHES; f++)
+	    {
+  	      if (matches[f] != 0){
+	        free(matches[f]);
+	      }
+	      matches[f] = 0;
+	    }
+         }
+
+	 continue;
+	
+    }
+ 
+    buf[i++] = c;
+
+    if (c == '\n' || c == '\r'){
+      break;
+    }
+  }
+  buf[i] = '\0';
+  return buf;
+}
+
+int
 getcmd(char *buf, int nbuf)
 {
   write(2, "$ ", 2);
   memset(buf, 0, nbuf);
-  gets(buf, nbuf);
+  tabgets(buf, nbuf);
+
   if (buf[0] == 0) // EOF
     return -1;
   return 0;
@@ -168,7 +280,11 @@ main(void)
       cmd[strlen(cmd) - 1] = 0; // chop \n
       if (chdir(cmd + 3) < 0)
         fprintf(2, "cannot cd %s\n", cmd + 3);
-    } else {
+    } else if(cmd[0] == 'c' && cmd[1] == 'd' && (cmd[2] == '\n' || cmd[2] == '\0')){
+	// If cd is typed alone change to root dir (Unix convention)
+    	if(chdir("/") < 0)
+          fprintf(2, "cannot cd /\n");
+    }else {
       if (fork1() == 0)
         runcmd(parsecmd(cmd));
       wait(0);
