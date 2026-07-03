@@ -430,8 +430,11 @@ scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-
   c->proc = 0;
+  c->last_proc = proc; // initialise last_proc field to prevent segfault
+  struct proc *start = c->last_proc;
+  p = start;
+
   for (;;) {
     // The most recent process to run may have had interrupts
     // turned off; enable them to avoid a deadlock if all
@@ -443,11 +446,11 @@ scheduler(void)
 
     int found = 0;
     
-    // Affinity sweep
-    for (p = proc; p < &proc[NPROC]; p++) {
+    // Affinity sweep - round robin
+    do {
+      if (++p >= &proc[NPROC]) p = proc; // wrap around
       acquire(&p->lock);
       if (p->state == RUNNABLE) {
-	found = 1;
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
@@ -457,42 +460,54 @@ scheduler(void)
 		continue;
 		
 	}
-	// printk("AFFINITY:hart %d running proc %d (last hart %d)\n";
-    	// cpuid(), p->pid, p->last_hart_used);
+	found = 1;
+#if defined(SCHED_DEBUG) || defined(SCHED_DEBUG_V) 
+	  printk("AFFINITY:hart %d running proc %d (last hart %d)\n",
+    	  cpuid(), p->pid, p->last_hart_used);
+#endif
         p->state = RUNNING;
         c->proc = p;
 	p->last_hart_used = cpuid();
-	// printk("swtch()\n");
+#ifdef SCHED_DEBUG_V
+	  printk("Now will execute process %d\n",p->pid);
+#endif
         swtch(&c->context, &p->context);
-	// printk("Back in scheduler - going to proc_end.\n");
-	
-	 // Process is done running for now.
+#ifdef SCHED_DEBUG_V
+	  // printk("Process %d ran and may have finished possibly.\n",p->pid);
+#endif
+	 // Process is done running for now. 
+	 // Record the process as last one that ran to support 'round-robinising' scheduling 
         // It should have changed its p->state before coming back.
         c->proc = 0;
+	c->last_proc = p;
 	release(&p->lock);
 	break;
 
-      }
+      } 
       release(&p->lock);
-    }
+    } while (p != start);
 
     // Fallback sweep
     // Prevent starvation of process if preferred hart is busy
     if (!found) {
-	// printk("No local process found...\n");
 	for(p = proc; p < &proc[NPROC]; p++){
           acquire(&p->lock);
           if(p->state == RUNNABLE){
             found = 1;
-	    // printk("FALLBACK:hart %d running proc %d (last hart %d)\n", 
-            // cpuid(), p->pid, p->last_hart_used);
+#if defined(SCHED_DEBUG) || defined(SCHED_DEBUG_V)
+	      printk("FALLBACK:hart %d running proc %d (last hart %d)\n", 
+              cpuid(), p->pid, p->last_hart_used);
+#endif
             p->state = RUNNING;
             c->proc = p;
             p->last_hart_used = cpuid();
-	    // printk("swtch()\n");
+#ifdef SCHED_DEBUG_V
+	      // printk("Now will execute process %d\n",p->pid);
+#endif
             swtch(&c->context, &p->context);
-	    // printk("Back in scheduler - going to proc_end.\n");
-	    
+#ifdef SCHED_DEBUG_V
+	      // printk("Process %d ran and may have finished possibly.\n",p->pid);
+#endif
 		
 	    // Process is done running for now.
             // It should have changed its p->state before coming back.
@@ -739,4 +754,5 @@ procdump(void)
     printk("%d %s %s", p->pid, state, p->name);
     printk("\n");
   }
+  printk("$ ");
 }
