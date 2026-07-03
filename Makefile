@@ -76,6 +76,14 @@ CFLAGS += -fno-builtin-printf -fno-builtin-fprintf -fno-builtin-vprintf
 CFLAGS += -I.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
+ifdef SCHED_DEBUG
+CFLAGS += -DSCHED_DEBUG
+endif
+
+ifdef SCHED_VERBOSE
+CFLAGS += -DSCHED_VERBOSE
+endif
+
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
 CFLAGS += -fno-pie -no-pie
@@ -204,3 +212,4 @@ check-qemu-version:
 .PHONY: fmt
 fmt:
 	clang-format -i $(wildcard kernel/*.[ch] user/*.[ch] mkfs/*.c)
+
