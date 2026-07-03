@@ -473,7 +473,7 @@ scheduler(void)
 #endif
         swtch(&c->context, &p->context);
 #ifdef SCHED_DEBUG_V
-	  // printk("Process %d ran and may have finished possibly.\n",p->pid);
+	  printk("Process %d ran and may have finished possibly.\n",p->pid);
 #endif
 	 // Process is done running for now. 
 	 // Record the process as last one that ran to support 'round-robinising' scheduling 
@@ -489,7 +489,7 @@ scheduler(void)
 
     // Fallback sweep
     // Prevent starvation of process if preferred hart is busy
-    if (!found) {
+if (!found) {
 	for(p = proc; p < &proc[NPROC]; p++){
           acquire(&p->lock);
           if(p->state == RUNNABLE){
@@ -502,11 +502,11 @@ scheduler(void)
             c->proc = p;
             p->last_hart_used = cpuid();
 #ifdef SCHED_DEBUG_V
-	      // printk("Now will execute process %d\n",p->pid);
+	      printk("Now will execute process %d\n",p->pid);
 #endif
             swtch(&c->context, &p->context);
 #ifdef SCHED_DEBUG_V
-	      // printk("Process %d ran and may have finished possibly.\n",p->pid);
+	      printk("Process %d ran and may have finished possibly.\n",p->pid);
 #endif
 		
 	    // Process is done running for now.
