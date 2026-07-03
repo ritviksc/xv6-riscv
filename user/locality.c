@@ -6,7 +6,7 @@ int main(){
         fork();
     }
     // lots of processes competing for harts
-    for(int i = 0; i < 1000000; i++)
+    for(;;)
         ;  // busy loop
     exit(0);
 }
