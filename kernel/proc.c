@@ -20,6 +20,8 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+#define NO_HART_USED -1
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -124,6 +126,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
+  p->last_hart_used = NO_HART_USED;
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0) {
@@ -169,6 +172,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->last_hart_used = NO_HART_USED;
 }
 
 // Create a user page table for a given process, with no user memory,
@@ -438,23 +442,69 @@ scheduler(void)
     intr_off();
 
     int found = 0;
+    
+    // Affinity sweep
     for (p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
       if (p->state == RUNNABLE) {
+	found = 1;
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
+	if (p->last_hart_used != NO_HART_USED && p->last_hart_used != cpuid()) {
+		// CPU locality not possible for this process right now, find other possible affine process for this hart
+		release(&p->lock);
+		continue;
+		
+	}
+	// printk("AFFINITY:hart %d running proc %d (last hart %d)\n";
+    	// cpuid(), p->pid, p->last_hart_used);
         p->state = RUNNING;
         c->proc = p;
+	p->last_hart_used = cpuid();
+	// printk("swtch()\n");
         swtch(&c->context, &p->context);
-
-        // Process is done running for now.
+	// printk("Back in scheduler - going to proc_end.\n");
+	
+	 // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
-        found = 1;
+	release(&p->lock);
+	break;
+
       }
       release(&p->lock);
     }
+
+    // Fallback sweep
+    // Prevent starvation of process if preferred hart is busy
+    if (!found) {
+	// printk("No local process found...\n");
+	for(p = proc; p < &proc[NPROC]; p++){
+          acquire(&p->lock);
+          if(p->state == RUNNABLE){
+            found = 1;
+	    // printk("FALLBACK:hart %d running proc %d (last hart %d)\n", 
+            // cpuid(), p->pid, p->last_hart_used);
+            p->state = RUNNING;
+            c->proc = p;
+            p->last_hart_used = cpuid();
+	    // printk("swtch()\n");
+            swtch(&c->context, &p->context);
+	    // printk("Back in scheduler - going to proc_end.\n");
+	    
+		
+	    // Process is done running for now.
+            // It should have changed its p->state before coming back.
+            c->proc = 0;
+	    release(&p->lock);
+	    break;
+          }
+	  release(&p->lock);
+       }	
+
+    }
+
     if (found == 0) {
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");

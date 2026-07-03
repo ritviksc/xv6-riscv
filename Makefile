@@ -151,6 +151,7 @@ UPROGS=\
 	$U/_sixfive\
 	$U/_uptime\
 	$U/_ctest\
+	$U/_locality\
 
 fs.img: mkfs/mkfs README user/test.txt $(UPROGS)
 	mkfs/mkfs fs.img README user/test.txt $(UPROGS)

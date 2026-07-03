@@ -93,6 +93,7 @@ struct proc {
   struct proc *parent; // Parent process
 
   // these are private to the process, so p->lock need not be held.
+  int last_hart_used;	       // Which hart did the process last use? If possible assign process the same CPU as before
   uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
