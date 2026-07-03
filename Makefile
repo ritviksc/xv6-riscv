@@ -77,11 +77,11 @@ CFLAGS += -I.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 ifdef SCHED_DEBUG
-CFLAGS += -DSCHED_DEBUG
+	CFLAGS += -DSCHED_DEBUG
 endif
 
-ifdef SCHED_VERBOSE
-CFLAGS += -DSCHED_VERBOSE
+ifdef SCHED_DEBUG_V
+	CFLAGS += -DSCHED_DEBUG_V
 endif
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)

@@ -645,6 +645,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if (p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+	p->last_hart_used = NO_HART_USED; // piroritse reducing wake-up latency
       }
       release(&p->lock);
     }
