@@ -21,7 +21,7 @@ struct context {
 // Per-CPU state.
 struct cpu {
   struct proc *proc;      // The process running on this cpu, or null.
-  struct proc *last_proc;  // Last process this cpu ran - round robin
+  struct proc *last_proc; // Last process this cpu ran - round robin
   struct context context; // swtch() here to enter scheduler().
   int noff;               // Depth of push_off() nesting.
   int intena;             // Were interrupts enabled before push_off()?
@@ -94,9 +94,10 @@ struct proc {
   struct proc *parent; // Parent process
 
   // these are private to the process, so p->lock need not be held.
-  int last_hart_used;	       // Which hart did the process last use? If possible assign process the same CPU as before
-  uint64 kstack;               // Virtual address of kernel stack
-  uint64 sz;                   // Size of process memory (bytes)
+  int
+    last_hart_used; // Which hart did the process last use? If possible assign process the same CPU as before
+  uint64 kstack;    // Virtual address of kernel stack
+  uint64 sz;        // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process

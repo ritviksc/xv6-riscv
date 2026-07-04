@@ -445,79 +445,77 @@ scheduler(void)
     intr_off();
 
     int found = 0;
-    
+
     // Affinity sweep - round robin
     do {
-      if (++p >= &proc[NPROC]) p = proc; // wrap around
+      if (++p >= &proc[NPROC])
+        p = proc; // wrap around
       acquire(&p->lock);
       if (p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-	if (p->last_hart_used != NO_HART_USED && p->last_hart_used != cpuid()) {
-		// CPU locality not possible for this process right now, find other possible affine process for this hart
-		release(&p->lock);
-		continue;
-		
-	}
-	found = 1;
-#if defined(SCHED_DEBUG) || defined(SCHED_DEBUG_V) 
-	  printk("AFFINITY:hart %d running proc %d (last hart %d)\n",
-    	  cpuid(), p->pid, p->last_hart_used);
+        if (p->last_hart_used != NO_HART_USED && p->last_hart_used != cpuid()) {
+          // CPU locality not possible for this process right now, find other possible affine process for this hart
+          release(&p->lock);
+          continue;
+        }
+        found = 1;
+#if defined(SCHED_DEBUG) || defined(SCHED_DEBUG_V)
+        printk("AFFINITY:hart %d running proc %d (last hart %d)\n", cpuid(),
+               p->pid, p->last_hart_used);
 #endif
         p->state = RUNNING;
         c->proc = p;
-	p->last_hart_used = cpuid();
+        p->last_hart_used = cpuid();
 #ifdef SCHED_DEBUG_V
-	  printk("Now will execute process %d\n",p->pid);
+        printk("Now will execute process %d\n", p->pid);
 #endif
         swtch(&c->context, &p->context);
 #ifdef SCHED_DEBUG_V
-	  printk("Process %d ran and may have finished possibly.\n",p->pid);
+        printk("Process %d ran and may have finished possibly.\n", p->pid);
 #endif
-	 // Process is done running for now. 
-	 // Record the process as last one that ran to support 'round-robinising' scheduling 
+        // Process is done running for now.
+        // Record the process as last one that ran to support 'round-robinising' scheduling
         // It should have changed its p->state before coming back.
         c->proc = 0;
-	c->last_proc = p;
-	release(&p->lock);
-	break;
-
-      } 
+        c->last_proc = p;
+        release(&p->lock);
+        break;
+      }
       release(&p->lock);
     } while (p != start);
 
     // Fallback sweep
     // Prevent starvation of process if preferred hart is busy
-if (!found) {
-	for(p = proc; p < &proc[NPROC]; p++){
-          acquire(&p->lock);
-          if(p->state == RUNNABLE){
-            found = 1;
+    if (!found) {
+      for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state == RUNNABLE) {
+          found = 1;
 #if defined(SCHED_DEBUG) || defined(SCHED_DEBUG_V)
-	      printk("FALLBACK:hart %d running proc %d (last hart %d)\n", 
-              cpuid(), p->pid, p->last_hart_used);
+          printk("FALLBACK:hart %d running proc %d (last hart %d)\n", cpuid(),
+                 p->pid, p->last_hart_used);
 #endif
-            p->state = RUNNING;
-            c->proc = p;
-            p->last_hart_used = cpuid();
+          p->state = RUNNING;
+          c->proc = p;
+          p->last_hart_used = cpuid();
 #ifdef SCHED_DEBUG_V
-	      printk("Now will execute process %d\n",p->pid);
+          printk("Now will execute process %d\n", p->pid);
 #endif
-            swtch(&c->context, &p->context);
+          swtch(&c->context, &p->context);
 #ifdef SCHED_DEBUG_V
-	      printk("Process %d ran and may have finished possibly.\n",p->pid);
+          printk("Process %d ran and may have finished possibly.\n", p->pid);
 #endif
-		
-	    // Process is done running for now.
-            // It should have changed its p->state before coming back.
-            c->proc = 0;
-	    release(&p->lock);
-	    break;
-          }
-	  release(&p->lock);
-       }	
 
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+          release(&p->lock);
+          break;
+        }
+        release(&p->lock);
+      }
     }
 
     if (found == 0) {
@@ -645,7 +643,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if (p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
-	p->last_hart_used = NO_HART_USED; // piroritse reducing wake-up latency
+        p->last_hart_used = NO_HART_USED; // piroritse reducing wake-up latency
       }
       release(&p->lock);
     }

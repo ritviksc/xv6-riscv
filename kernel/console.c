@@ -173,7 +173,8 @@ consoleintr(int c)
       // store for consumption by consoleread().
       cons.buf[cons.e++ % INPUT_BUF_SIZE] = c;
 
-      if (c == '\n' || c == C('D') || c == C('F') || cons.e - cons.r == INPUT_BUF_SIZE) {
+      if (c == '\n' || c == C('D') || c == C('F') ||
+          cons.e - cons.r == INPUT_BUF_SIZE) {
         // wake up consoleread() if a whole line (or end-of-file)
         // has arrived.
         cons.w = cons.e;
